@@ -1,0 +1,2 @@
+[console_scripts]
+contextrecorder = contextrecorder.cli:main

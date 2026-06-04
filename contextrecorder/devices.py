@@ -45,12 +45,24 @@ def choose_device():
     list_devices()
 
     while True:
-        selection = input("\nSelect device, for example speaker:0 or mic:0: ")
-
         try:
+            selection = input(
+                "\nSelect device (speaker:0, mic:0) or q to quit: "
+            ).strip().lower()
+
+            if selection in ("q", "quit", "exit"):
+                print("Exiting...")
+                raise SystemExit(0)
+
             device_type, index = parse_device_selection(selection)
             device = get_input_device(device_type, index)
+
             print(f"\nSelected: {device.name}\n")
             return device_type, index
+
+        except KeyboardInterrupt:
+            print("\nExiting...")
+            raise SystemExit(0)
+
         except (ValueError, IndexError) as error:
             print(f"Invalid selection: {error}")

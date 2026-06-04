@@ -1,11 +1,12 @@
 import os
 import threading
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 
-from devices import get_input_device
+from .devices import get_input_device
 
 
 class Recorder:
@@ -21,7 +22,7 @@ class Recorder:
         self.chunk_seconds = chunk_seconds
         self.device_type = device_type
         self.device_index = device_index
-        self.output_dir = output_dir
+        self.output_dir = Path(output_dir)
 
         self.device = get_input_device(device_type, device_index)
 
@@ -29,7 +30,7 @@ class Recorder:
         self.audio_data = []
         self.thread = None
 
-        os.makedirs(self.output_dir, exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def _record_loop(self):
         try:
@@ -58,7 +59,7 @@ class Recorder:
 
         self.thread = threading.Thread(
             target=self._record_loop,
-            daemon=True
+            daemon=True,
         )
         self.thread.start()
 
@@ -87,6 +88,45 @@ class Recorder:
 
         print(f"Saved: {filename}")
 
+    def record_chunks(self, output_dir=None, chunk_seconds=10):
+        chunk_output_dir = Path(output_dir) if output_dir else self.output_dir
+        chunk_output_dir.mkdir(parents=True, exist_ok=True)
+
+        chunk_number = 1
+
+        print(f"Recording from: {self.device.name}")
+        print(f"Recording in chunks of {chunk_seconds} seconds.")
+        print(f"Saving chunks to: {chunk_output_dir}")
+        print("Press Ctrl+C to stop.")
+
+        try:
+            with self.device.recorder(samplerate=self.sample_rate) as recorder:
+                while True:
+                    chunk = recorder.record(
+                        numframes=self.sample_rate * chunk_seconds
+                    )
+
+                    if chunk is None or chunk.size == 0:
+                        continue
+
+                    chunk = self._normalize(chunk)
+
+                    filename = self._build_chunk_filename(
+                        chunk_output_dir,
+                        chunk_number,
+                    )
+
+                    sf.write(filename, chunk, self.sample_rate)
+
+                    print(f"Saved: {filename}")
+                    chunk_number += 1
+
+        except KeyboardInterrupt:
+            print("\nRecording stopped.")
+
+        except Exception as error:
+            print(f"Chunk recording error: {error}")
+
     def _normalize(self, audio):
         max_value = np.max(np.abs(audio))
 
@@ -99,7 +139,10 @@ class Recorder:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         source = f"{self.device_type}_{self.device_index}"
 
-        return os.path.join(
-            self.output_dir,
-            f"{source}_{timestamp}.wav"
-        )
+        return self.output_dir / f"{source}_{timestamp}.wav"
+
+    def _build_chunk_filename(self, output_dir, chunk_number):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        source = f"{self.device_type}_{self.device_index}"
+
+        return output_dir / f"{source}_{timestamp}_chunk_{chunk_number:04d}.wav"
