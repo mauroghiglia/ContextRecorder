@@ -2,25 +2,55 @@ import soundcard as sc
 
 
 def list_devices():
-    print("\nSpeakers / loopback-capable outputs:")
+    print("\nAvailable recording devices:\n")
+
     for i, speaker in enumerate(sc.all_speakers()):
-        print(f"  speaker:{i}  {speaker.name}")
+        print(f"speaker:{i}  {speaker.name}")
 
-    print("\nMicrophones:")
     for i, mic in enumerate(sc.all_microphones()):
-        print(f"  mic:{i}      {mic.name}")
+        print(f"mic:{i}      {mic.name}")
 
 
-def get_input_device(device_type="speaker", index=0):
+def parse_device_selection(selection):
+    try:
+        device_type, index = selection.strip().lower().split(":")
+        index = int(index)
+    except ValueError:
+        raise ValueError("Use format speaker:0 or mic:0")
+
+    if device_type not in ("speaker", "mic"):
+        raise ValueError("Device type must be speaker or mic")
+
+    return device_type, index
+
+
+def get_input_device(device_type, index):
     if device_type == "speaker":
-        devices = sc.all_speakers()
+        speakers = sc.all_speakers()
+        selected = speakers[index]
+
         return sc.get_microphone(
-            id=str(devices[index].name),
+            id=str(selected.name),
             include_loopback=True
         )
 
     if device_type == "mic":
-        devices = sc.all_microphones()
-        return devices[index]
+        microphones = sc.all_microphones()
+        return microphones[index]
 
-    raise ValueError("device_type must be 'speaker' or 'mic'")
+    raise ValueError("Device type must be speaker or mic")
+
+
+def choose_device():
+    list_devices()
+
+    while True:
+        selection = input("\nSelect device, for example speaker:0 or mic:0: ")
+
+        try:
+            device_type, index = parse_device_selection(selection)
+            device = get_input_device(device_type, index)
+            print(f"\nSelected: {device.name}\n")
+            return device_type, index
+        except (ValueError, IndexError) as error:
+            print(f"Invalid selection: {error}")

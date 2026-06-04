@@ -1,17 +1,22 @@
 import keyboard
-from recorder import Recorder
-from commands import register_commands
-from devices import list_devices
 
-list_devices()
+from commands import register_commands
+from devices import choose_device
+from recorder import Recorder
 
 
 def main():
-    recorder = Recorder()
+    device_type, device_index = choose_device()
+
+    recorder = Recorder(
+        device_type=device_type,
+        device_index=device_index
+    )
 
     register_commands(recorder)
 
-    print("ContextSuggest started.")
+    print("ContextRecorder started.")
+    print("Press s to start, x to stop, q to quit.")
 
     keyboard.wait("q")
 
