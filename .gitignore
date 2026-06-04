@@ -1,0 +1,7 @@
+venv/
+recordings/
+models/
+__pycache__/
+*.wav
+README.md
+requirements.txt
